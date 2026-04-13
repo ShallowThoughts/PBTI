@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PBTI - PUBG吃鸡性格测试</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+            color: #ddd;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            background: rgba(20, 20, 20, 0.97);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 0 30px rgba(255, 80, 0, 0.25);
+        }
+        h1 { 
+            text-align: center; 
+            color: #ff5500; 
+            margin-bottom: 8px; 
+        }
+        .subtitle { 
+            text-align: center; 
+            color: #aaa; 
+            margin-bottom: 25px; 
+            font-size: 1.05em; 
+        }
+        
+        .progress { 
+            height: 8px; 
+            background: #333; 
+            border-radius: 4px; 
+            margin: 25px 0; 
+            overflow: hidden; 
+        }
+        .progress-bar { 
+            height: 100%; 
+            background: linear-gradient(to right, #ff7700, #ffaa00); 
+            width: 0%; 
+            transition: width 0.4s ease; 
+        }
+        
+        .question-num { 
+            text-align: right; 
+            color: #777; 
+            margin-bottom: 10px; 
+        }
+        .question { 
+            font-size: 1.22em; 
+            margin: 30px 0 25px; 
+            line-height: 1.55; 
+        }
+        
+        .options { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 14px; 
+        }
+        .option {
+            background: #2a2a2a;
+            padding: 16px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            font-size: 1.05em;
+        }
+        .option:hover { 
+            background: #3a3a3a; 
+            border-color: #ff7700; 
+        }
+        .option.selected { 
+            background: #4a2a1a; 
+            border-color: #ff7700; 
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 14px 40px;
+            font-size: 1.15em;
+            background: #ff5500;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+        button:hover { background: #ff7700; }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍗 PBTI</h1>
+        <p class="subtitle">PUBG吃鸡性格测试（28题）</p>
+
+        <div id="quiz">
+            <div class="progress"><div id="progress-bar" class="progress-bar"></div></div>
+            <div class="question-num">第 <span id="current-q">1</span>/28 题</div>
+            <div id="question-text" class="question"></div>
+            <div id="options" class="options"></div>
+        </div>
+
+        <div id="result" class="result" style="display:none; text-align:center;">
+            <h2>你的PBTI类型是：<span id="type"></span></h2>
+            <div id="nickname" style="color:#ffaa44; font-size:1.65em; margin:15px 0;"></div>
+            <div id="desc" style="margin:25px 0; line-height:1.7; font-size:1.12em; text-align:left; background:rgba(40,40,40,0.6); padding:22px; border-radius:12px;"></div>
+            
+            <button onclick="restart()">重新测试</button>
+            <button onclick="copyShareLink()">🔗 复制测试链接</button>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+
+        const questions = [
+            // E/I 维度
+            {q: "1. 跳伞前，你通常会：", a: "A. 大喊“兄弟们跟我一起跳！冲啊！”", b: "B. 随便说一句“跳哪都行”，不怎么说话", c: "C. 默默选个偏远点，自己慢慢玩"},
+            {q: "2. 队友开麦唱歌或骂街时，你会：", a: "A. 立刻跟着一起嗨，语音比游戏还热闹", b: "B. 偶尔搭两句，保持氛围", c: "C. 默默关麦，自己听音乐打游戏"},
+            {q: "3. 决赛圈只剩你和队友，你会：", a: "A. 大喊“冲！掩护我上！”", b: "B. 正常报点，但不会太激动", c: "C. 安静找角度，准备自己单杀"},
+            {q: "4. 开车转移的时候，你会：", a: "A. 一边开车一边和队友聊天吹牛", b: "B. 只报必要的点位，偶尔说两句", c: "C. 安静开车，只看小地图"},
+            {q: "5. 听到队友在语音里激动大叫，你会：", a: "A. 也跟着激动起来，一起骂或笑", b: "B. 觉得有点吵，但会忍着", c: "C. 完全不参与，继续安静操作"},
+            {q: "6. 打完一局后，你会：", a: "A. 立刻开语音复盘、吐槽、准备下一把", b: "B. 简单说一句“再来一把”就行", c: "C. 默默点下一局，不想多聊"},
+            {q: "7. 落地遇到敌人，你会：", a: "A. 边打边喊“这里有人！快来支援！”", b: "B. 报点，但声音不大", c: "C. 自己偷偷打，尽量不叫队友"},
+            {q: "8. 进入一栋楼，你会先：", a: "A. 把每个房间、每个箱子都仔细搜一遍", b: "B. 快速搜主要房间，差不多就行", c: "C. 快速判断点位好坏，直接占高地"},
+            {q: "9. 毒圈快刷的时候，你会：", a: "A. 看准安全区边缘，慢慢开车过去", b: "B. 大概看一眼，直接开车转移", c: "C. 脑补下一个圈大概在哪，提前跑位"},
+            {q: "10. 捡到一把M416，你会：", a: "A. 一定要配齐倍镜、枪口、托才满意", b: "B. 配2-3个配件，够用就行", c: "C. 随便配，觉得操作更重要"},
+            {q: "11. 听到远处枪声，你会：", a: "A. 判断大概是哪把枪、距离多远", b: "B. 大概听听方向，继续自己的事", c: "C. 直接脑补敌人有几个人、什么打法"},
+            {q: "12. 决赛圈缩圈时，你会：", a: "A. 仔细观察草丛、树后每一个可疑点", b: "B. 大概扫一眼，注意明显位置", c: "C. 凭感觉猜敌人可能在哪个方向"},
+            {q: "13. 舔包的时候，你会：", a: "A. 把所有子弹、配件、药品都尽量捡光", b: "B. 捡关键的东西，快速离开", c: "C. 只捡最需要的，马上走人"},
+            {q: "14. 看到敌人开车冲过来，你会：", a: "A. 算好距离和伤害，找掩体反打", b: "B. 快速反应，边打边躲", c: "C. 直接脑补“这波怎么秀操作”"},
+            {q: "15. 队友被打倒，你会：", a: "A. 计算距离和风险，觉得救不了就继续打", b: "B. 看情况，能救就救", c: "C. 就算危险也要冲过去拉，“兄弟不能丢”"},
+            {q: "16. 队友误伤了你，你会：", a: "A. 冷静说“没事，下把注意位置”", b: "B. 心里有点不爽，但不说", c: "C. 有点委屈，但还是很快原谅他"},
+            {q: "17. 看到敌人残血跑路，你会：", a: "A. 冷静追击，计算最佳路线", b: "B. 追一下，追不到就算", c: "C. 气得大喊“别让他跑！”直接猛追"},
+            {q: "18. 决赛圈只剩你一个队友倒了，你会：", a: "A. 理性分析局势，优先保证自己吃鸡", b: "B. 试试看能不能救", c: "C. 想着“为了兄弟也要吃这鸡！”冲上去"},
+            {q: "19. 敌人语音嘲讽你，你会：", a: "A. 不理他，继续按自己的节奏打", b: "B. 心里骂一句，但不回喷", c: "C. 直接回喷回去，气势不能输"},
+            {q: "20. 选择枪械时，你会：", a: "A. 看数据和伤害，选最优组合", b: "B. 根据当前情况选", c: "C. 看心情，今天就爱用喷子/98k"},
+            {q: "21. 打完输了一局，你会：", a: "A. 分析哪里没做好，下把改进", b: "B. 随便骂一句运气差", c: "C. 骂队友或骂游戏，情绪化"},
+
+            // J/P 维度
+            {q: "22. 跳伞前，你会：", a: "A. 提前看好地图，计划好具体落地点和路线", b: "B. 大概看一眼热门点", c: "C. 随便看一眼，跳下去再决定"},
+            {q: "23. 打到中期，你会：", a: "A. 严格执行“先发育、后打架”的计划", b: "B. 看情况发育或打架", c: "C. 看到人就想打，边打边发育"},
+            {q: "24. 毒圈开始缩小，你会：", a: "A. 早早占好安全点，守株待兔", b: "B. 及时转移到安全区", c: "C. 随缘跑毒，哪安全去哪"},
+            {q: "25. 队友问“下一把跳哪”，你会：", a: "A. 直接说“我计划好了，跟我走”", b: "B. “看情况吧”或“热门点都行”", c: "C. “随便，看心情/看圈”"},
+            {q: "26. 捡到一把好枪后，你会：", a: "A. 按原计划去下一个发育点", b: "B. 稍微调整一下计划", c: "C. 立刻想去找人刚枪试试新枪"},
+            {q: "27. 一局游戏中，你的整体风格是：", a: "A. 有清晰的“落地-发育-打架-决赛”流程", b: "B. 大致有计划，但会灵活调整", c: "C. 完全随缘，打到哪算哪"},
+            {q: "28. 连跪几把后，你会：", a: "A. 调整策略，换个打法继续", b: "B. 随便玩，慢慢找状态", c: "C. “摆了，随便玩玩下一把”"}
+        ];
+
+        // ==================== 16种结果 ====================
+        const results = {
+            "ESTP": {nick: "狂飙突击手", desc: "落地刚枪、开车撞人、决赛圈裸冲的狠人！操作爆炸，但容易第一个送快递。爱用M4+喷子，最搭冷静报点的队友，最怕苟王。"},
+            "ESTJ": {nick: "吃鸡纪律班长", desc: "落地就分配任务，指挥全队，计划清晰。胜率较高，但队友不听话会生气。适合当队长。"},
+            "ESFP": {nick: "快乐刚枪王", desc: "打游戏就是为了开心！看到人就冲，语音最热闹。爱用AKM，决赛圈也敢跳舞。"},
+            "ESFJ": {nick: "暖心守护者", desc: "重情义，队友倒了必救，爱给大家加油。团队最暖的后勤担当。"},
+            "ENTP": {nick: "骚操作发明家", desc: "脑洞大，爱整活（电钻哥式骚操作）。最爱秀，98k一枪爆头是日常。"},
+            "ENTJ": {nick: "吃鸡指挥官", desc: "天生队长，战略眼光强，带领队伍吃鸡。缺点：指挥不动会暴躁。"},
+            "ENFP": {nick: "快乐源泉摆烂王", desc: "打游戏图一乐，创意多但容易分心。决赛圈可能在草丛唱歌。"},
+            "ENFJ": {nick: "团队灵魂人物", desc: "鼓励队友，氛围拉满，重感情。适合当精神领袖。"},
+            "ISTP": {nick: "沉默枪神", desc: "安静独狼，操作丝滑，爱研究枪械。一枪一个准，不喜欢指挥。"},
+            "ISTJ": {nick: "稳健苟发育王", desc: "严格按计划发育，细节拉满，胜率很高。适合单排或稳健四排。"},
+            "ISFP": {nick: "毒圈艺术家", desc: "喜欢找个安静草丛听歌等圈，美感拉满。心态好，但可能吃不到鸡。"},
+            "ISFJ": {nick: "忠诚守护者", desc: "对队友超级负责，默默拉人、报点。团队最可靠的后盾。"},
+            "INTP": {nick: "理论吃鸡大师", desc: "爱研究机制、概率、地图，但实战有时手忙脚乱。脑力担当。"},
+            "INTJ": {nick: "战略阴谋家", desc: "提前预判好几步，爱占点阴人。吃鸡率高，但队友可能觉得太冷。"},
+            "INFP": {nick: "毒圈诗人 / 伏地魔", desc: "最爱苟在草丛里等决赛，内心戏丰富。心态稳，但太佛系。"},
+            "INFJ": {nick: "洞察先知", desc: "能感觉到危险和圈的走向，喜欢给队友提建议。稀有战略+情感结合型。"}
+        };
+
+        let currentQuestion = 0;
+        let scores = { E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0 };
+
+        function loadQuestion() {
+            const q = questions[currentQuestion];
+            document.getElementById("question-text").innerHTML = `<strong>${q.q}</strong>`;
+            
+            const optsHTML = `
+                <div class="option" data-value="a" onclick="selectOption(this)">${q.a}</div>
+                <div class="option" data-value="b" onclick="selectOption(this)">${q.b}</div>
+                <div class="option" data-value="c" onclick="selectOption(this)">${q.c}</div>
+            `;
+            document.getElementById("options").innerHTML = optsHTML;
+            updateProgress();
+        }
+
+        function selectOption(el) {
+            if (el.classList.contains('selected')) return;
+            
+            document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+
+            const value = el.dataset.value;
+            const idx = currentQuestion;
+
+            // 计分
+            if (idx < 7) { // E/I
+                if (value === 'a') scores.E += 2;
+                else if (value === 'c') scores.I += 2;
+                else { scores.E += 1; scores.I += 1; }
+            } else if (idx < 14) { // S/N
+                if (value === 'a') scores.S += 2;
+                else if (value === 'c') scores.N += 2;
+                else { scores.S += 1; scores.N += 1; }
+            } else if (idx < 21) { // T/F
+                if (value === 'a') scores.T += 2;
+                else if (value === 'c') scores.F += 2;
+                else { scores.T += 1; scores.F += 1; }
+            } else { // J/P
+                if (value === 'a') scores.J += 2;
+                else if (value === 'c') scores.P += 2;
+                else { scores.J += 1; scores.P += 1; }
+            }
+
+            currentQuestion++;
+            if (currentQuestion < questions.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function updateProgress() {
+            const percent = (currentQuestion / questions.length) * 100;
+            document.getElementById("progress-bar").style.width = percent + "%";
+            document.getElementById("current-q").textContent = currentQuestion + 1;
+        }
+
+        function getType() {
+            const ei = scores.E > scores.I ? "E" : "I";
+            const sn = scores.S > scores.N ? "S" : "N";
+            const tf = scores.T > scores.F ? "T" : "F";
+            const jp = scores.J > scores.P ? "J" : "P";
+            return ei + sn + tf + jp;
+        }
+
+        function showResult() {
+            document.getElementById("quiz").style.display = "none";
+            const resultDiv = document.getElementById("result");
+            resultDiv.style.display = "block";
+
+            const type = getType();
+            const res = results[type] || {nick: "独特吃鸡选手", desc: "你的打法非常有个性，继续享受绝地求生吧！"};
+
+            document.getElementById("type").textContent = type;
+            document.getElementById("nickname").textContent = res.nick;
+            document.getElementById("desc").innerHTML = `
+                <p><strong>你的吃鸡风格：</strong>${res.desc}</p>
+                <p style="margin-top:20px; color:#aaa;">快把你的PBTI结果分享给朋友们吧！🍗</p>
+            `;
+        }
+
+        function restart() {
+            currentQuestion = 0;
+            scores = { E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0 };
+            document.getElementById("quiz").style.display = "block";
+            document.getElementById("result").style.display = "none";
+            loadQuestion();
+        }
+
+        function copyShareLink() {
+            const url = "https://pbti.lxixi.top";
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast('🔗 链接已复制，快去分享给吃鸡好友！');
+                }).catch(() => fallbackCopy(url));
+            } else {
+                fallbackCopy(url);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('🔗 链接已复制');
+            } catch (e) {
+                alert('复制失败，请手动复制网址');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2500);
+        }
+
+        // 启动测试
+        loadQuestion();
+    </script>
+</body>
+</html>
